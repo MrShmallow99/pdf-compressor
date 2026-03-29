@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Compressor — Local & Private</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0f0d0a;
+      --paper: #f5f0e8;
+      --cream: #ede8df;
+      --surface: #faf8f5;
+      --accent: #c84b2f;
+      --dim: #7a7570;
+      --border: #d0c9be;
+      --cta-bg: #0f0d0a;
+      --cta-fg: #f5f0e8;
+      --cta-hover: #2a2520;
+      --download-fg: #f5f0e8;
+      --accent-hover: #a83a22;
+      --status-info-bg: #edf4ff;
+      --status-info-border: #b3d0ff;
+      --status-info-text: #1a4f8a;
+      --status-success-bg: #edfaf0;
+      --status-success-border: #a8e6b8;
+      --status-success-text: #1a6635;
+      --status-error-bg: #fff0ee;
+      --status-error-border: #f5b8b0;
+      --status-error-text: #8a1a1a;
+      --mono: 'DM Mono', monospace;
+      --serif: 'Fraunces', Georgia, serif;
+    }
+
+    body.dark-mode {
+      color-scheme: dark;
+      --ink: #e8e2d9;
+      --paper: #23201d;
+      --cream: #322e2a;
+      --surface: #2a2723;
+      --accent: #d85a3d;
+      --dim: #a39c93;
+      --border: #46413b;
+      --cta-bg: #e8e2d9;
+      --cta-fg: #1a1816;
+      --cta-hover: #cfc8c0;
+      --download-fg: #f5f0e8;
+      --accent-hover: #e0684c;
+      --status-info-bg: #1e2633;
+      --status-info-border: #364963;
+      --status-info-text: #a1bde0;
+      --status-success-bg: #1f2b24;
+      --status-success-border: #375945;
+      --status-success-text: #8dc9a3;
+      --status-error-bg: #30211f;
+      --status-error-border: #6e433d;
+      --status-error-text: #e6a59c;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 14px;
+    }
+    body {
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+    /* Same as index_unlocker.html .shell + width:100% so the column centers reliably */
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: 100%;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 0 24px;
+      box-sizing: border-box;
+    }
+
+    header {
+      padding: 48px 0 32px;
+      border-bottom: 1.5px solid var(--border);
+      min-width: 0;
+      width: 100%;
+    }
+
+    .header-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+    .logo-line { display: flex; align-items: baseline; gap: 12px; flex: 1 1 auto; min-width: 0; }
+    .header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+
+    @media (min-width: 720px) {
+      .header-title-row { flex-wrap: nowrap; align-items: center; }
+      .logo-line { min-width: 0; flex: 1 1 0%; }
+      .logo-line h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-actions { margin-left: auto; flex-shrink: 0; }
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--dim);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .icon-btn:hover { background: var(--cream); color: var(--ink); border-color: var(--dim); transform: scale(1.04); }
+    .icon-btn:active { transform: scale(1); }
+    .icon-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .icon-btn svg path { fill: currentColor; }
+
+    body:not(.dark-mode) .theme-icon-sun { display: none; }
+    body.dark-mode .theme-icon-moon { display: none; }
+
+    .logo-icon { font-size: 28px; line-height: 1; }
+    h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 5vw, 36px); letter-spacing: -0.02em; line-height: 1.1; }
+
+    .header-sub { min-width: 0; }
+    .tagline { margin-top: 8px; color: var(--dim); font-size: 13px; letter-spacing: 0.04em; }
+    @media (min-width: 720px) {
+      .privacy-badge { white-space: nowrap; }
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 4px 10px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+    .privacy-badge::before { content: '●'; color: #4caf50; font-size: 8px; }
+
+    /* Same vertical rhythm as unlocker; min-width:0 prevents grid overflow / horizontal shift */
+    main {
+      padding: 40px 0;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* #dropzone — exact match to index_unlocker.html #drop-zone (default = card surface via transparent; hover/drag = cream) */
+    #dropzone {
+      position: relative;
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      border-bottom: 1.5px solid var(--border);
+    }
+    #dropzone:hover,
+    #dropzone.dropzone--dragover { background: var(--cream); }
+    #dropzone.dropzone--dragover { border-color: var(--accent); }
+
+    #dropzone.dropzone--has-file {
+      cursor: default;
+      text-align: left;
+    }
+
+    #dropzone input#fileInput {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .dz-icon { font-size: 40px; margin-bottom: 12px; line-height: 1; user-select: none; }
+    .dz-label { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: 20px; color: var(--ink); }
+    .dz-sub { margin-top: 6px; font-size: 12px; color: var(--dim); letter-spacing: 0.04em; }
+    .dz-browse {
+      font-family: inherit;
+      font-size: inherit;
+      letter-spacing: inherit;
+      color: var(--accent);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+    .dz-browse:hover { color: var(--accent-hover); }
+
+    .dz-chosen {
+      margin-top: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px 12px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    .dz-chosen[hidden] { display: none !important; }
+    .dz-chosen:not([hidden]) { display: flex; }
+    .dz-chosen .fname {
+      max-width: min(300px, 100%);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dz-meta-size { font-size: 12px; color: var(--dim); font-weight: 400; }
+    .dz-change {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s;
+    }
+    .dz-change:hover { color: var(--accent-hover); }
+
+    .section { padding: 24px 32px; border-bottom: 1.5px solid var(--border); }
+    .section[hidden] { display: none !important; }
+
+    .section__label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 10px;
+    }
+
+    .compression-options { display: grid; gap: 8px; }
+    .compression-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 2px;
+      background: var(--paper);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .compression-option:hover { border-color: var(--dim); background: var(--cream); }
+    .compression-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .compression-option input { margin-top: 3px; accent-color: var(--accent); }
+    .compression-option__body { flex: 1; min-width: 0; }
+    .compression-option__title { font-weight: 600; font-size: 13px; margin: 0 0 4px; color: var(--ink); }
+    .compression-option__desc { margin: 0; font-size: 11px; color: var(--dim); line-height: 1.5; }
+    .compression-option:has(input:checked) { border-color: var(--accent); background: var(--cream); }
+
+    [hidden] { display: none !important; }
+
+    .action-section { padding: 24px 32px; }
+
+    .btn-unlock {
+      width: 100%;
+      padding: 14px;
+      background: var(--cta-bg);
+      color: var(--cta-fg);
+      border: none;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-unlock:hover:not(:disabled) { background: var(--cta-hover); transform: translateY(-1px); }
+    .btn-unlock:active:not(:disabled) { transform: translateY(0); }
+    .btn-unlock:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .processing {
+      padding: 24px 32px;
+      border-bottom: 1.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(122, 117, 112, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    body.dark-mode .spinner { border-color: rgba(163, 156, 147, 0.25); border-top-color: var(--accent); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .processing__text { font-size: 13px; color: var(--dim); }
+    .processing__hint { font-size: 12px; color: var(--dim); letter-spacing: 0.02em; opacity: 0.9; }
+
+    .processing--error .spinner { display: none; }
+    .processing--error .processing__text { color: var(--status-error-text); font-weight: 600; }
+
+    .results { padding: 24px 32px; }
+    .results__title {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 16px;
+      color: var(--ink);
+    }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 380px) { .stat-grid { grid-template-columns: 1fr; } }
+
+    .stat {
+      padding: 12px 14px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+    .stat__label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      margin-bottom: 8px;
+    }
+    .stat__value { font-size: 15px; font-weight: 500; color: var(--ink); }
+    .stat--highlight .stat__value { color: var(--status-success-text); }
+
+    .saved-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--status-success-text);
+      background: var(--status-success-bg);
+      border: 1px solid var(--status-success-border);
+      border-radius: 2px;
+      margin-bottom: 16px;
+    }
+
+    .results__footnote { margin: 0 0 16px; font-size: 11px; color: var(--dim); font-style: italic; line-height: 1.5; }
+
+    /* Result actions — unlocker .btn-download + .btn-reset + share as .icon-btn row */
+    .btn-download {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: var(--download-fg);
+      border: none;
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-download:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn-reset {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: var(--dim);
+      border: 1.5px solid var(--border);
+      border-radius: 2px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-reset:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+
+    .result-actions-stack { display: flex; flex-direction: column; gap: 0; }
+    .result-actions-stack .btn-download { margin-top: 0; }
+    .result-actions-stack .btn-download + .result-share-row { margin-top: 8px; }
+    .result-actions-stack .result-share-row + .btn-reset { margin-top: 8px; }
+    .result-actions-stack .btn-reset + .btn-reset { margin-top: 8px; }
+
+    .result-share-row { display: flex; justify-content: center; }
+    .result-share-row .icon-btn { width: 100%; max-width: 100%; height: auto; min-height: 42px; padding: 10px 14px; gap: 8px; border-radius: 4px; }
+    .result-share-row .icon-btn span { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: var(--ink); }
+
+    footer {
+      padding: 20px 0 28px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.04em;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .footer-note {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      width: 100%;
+      min-width: 0;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    @media (min-width: 720px) {
+      footer { flex-wrap: nowrap; justify-content: space-between; }
+      .footer-tech {
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      /* Share the row with .footer-tech; ellipsis needs flex-basis 0 + min-width 0 */
+      .footer-note {
+        flex: 1 1 0%;
+        width: auto;
+        max-width: 100%;
+      }
+    }
+
+    /* Instructions grid — unlocker .how (also .features for semantics) */
+    .how,
+    .features {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .how-step {
+      padding: 16px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+    .how-num {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--border);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .how-title {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+      color: var(--ink);
+    }
+    .how-desc { font-size: 11px; color: var(--dim); line-height: 1.5; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      max-width: min(90vw, 20rem);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-family: var(--mono);
+      background: var(--surface);
+      color: var(--ink);
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      z-index: 100;
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .toast--visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (max-width: 480px) {
+      #dropzone { padding: 32px 20px; }
+      .section, .action-section, .processing, .results { padding: 20px; }
+      .how, .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<script>
+(function () {
+  try {
+    var k = 'pdf-compressor-theme';
+    var s = localStorage.getItem(k);
+    var dark = s === 'dark' || (s !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
+  } catch (e) { /* ignore */ }
+})();
+</script>
+<div class="shell">
+  <header>
+    <div class="header-title-row">
+      <div class="logo-line">
+        <span class="logo-icon" aria-hidden="true">📚</span>
+        <h1>PDF Compressor</h1>
+      </div>
+      <div class="header-actions" role="toolbar" aria-label="Page actions">
+        <button type="button" class="icon-btn" id="sharePageBtn" title="Share" aria-label="Share this page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+        </button>
+        <a class="icon-btn" href="https://github.com/MrShmallow99/pdf-compressor" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View on GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        </a>
+        <button type="button" class="icon-btn" id="themeToggle" title="Dark mode" aria-label="Toggle color theme" aria-pressed="false">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2v-2H2v2zm18 0h2v-2h-2v2zM11 2v2h2V2h-2zm0 18v2h2v-2h-2zM4.93 4.93l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zm12.02 12.02l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zm1.41-11.02l-1.41 1.41 1.41 1.41 1.41-1.41-1.41-1.41zM4.93 17.07l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="header-sub">
+      <p class="tagline">Shrink PDFs entirely in your browser. No uploads — your files never leave this device.</p>
+      <span class="privacy-badge">100% client-side &middot; no uploads &middot; no server</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div
+        class="dropzone"
+        id="dropzone"
+        role="button"
+        tabindex="0"
+        aria-label="Drop a PDF here or browse"
+      >
+        <input
+          type="file"
+          id="fileInput"
+          accept="application/pdf,.pdf"
+          aria-label="Choose PDF file"
+        />
+        <div id="dropzoneEmpty">
+          <div class="dz-icon" aria-hidden="true">📄</div>
+          <div class="dz-label">Choose or drop your PDF here</div>
+          <div class="dz-sub">
+            or <button type="button" class="dz-browse" id="browseBtn">click to browse</button>
+          </div>
+        </div>
+        <div id="dropzoneFile" class="dz-chosen" hidden>
+          <span aria-hidden="true">📎</span>
+          <span class="fname" id="fileName"></span>
+          <span class="dz-meta-size" id="fileSize"></span>
+          <button type="button" class="dz-change" id="changeFileBtn">Change file</button>
+        </div>
+      </div>
+
+      <div class="section" id="compressionSection" hidden>
+        <span class="section__label">Compression level</span>
+        <div class="compression-options" role="radiogroup" aria-label="Compression level">
+          <label class="compression-option">
+            <input type="radio" name="compression" value="extreme" />
+            <div class="compression-option__body">
+              <div class="compression-option__title">Extreme compression</div>
+              <p class="compression-option__desc">Smallest file; may affect visual fidelity on image-heavy PDFs.</p>
+            </div>
+          </label>
+          <label class="compression-option">
+            <input type="radio" name="compression" value="recommended" checked />
+            <div class="compression-option__body">
+              <div class="compression-option__title">Recommended</div>
+              <p class="compression-option__desc">Balanced size and quality for most documents.</p>
+            </div>
+          </label>
+          <label class="compression-option">
+            <input type="radio" name="compression" value="high" />
+            <div class="compression-option__body">
+              <div class="compression-option__title">High quality</div>
+              <p class="compression-option__desc">Larger output; preserves detail and sharp text.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="action-section">
+        <button type="button" class="btn-unlock" id="compressBtn" disabled>Compress PDF</button>
+      </div>
+
+      <div class="processing" id="processingSection" hidden>
+        <div class="spinner" role="status" aria-live="polite" aria-label="Compressing"></div>
+        <p class="processing__text" id="processingText">Compressing your PDF…</p>
+        <p class="processing__hint" id="processingHint">Each run uses a fresh worker and Ghostscript instance.</p>
+      </div>
+
+      <div class="results" id="resultState" hidden>
+        <h2 class="results__title">Done</h2>
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="stat__label">Original</div>
+            <div class="stat__value" id="statOriginal"></div>
+          </div>
+          <div class="stat stat--highlight">
+            <div class="stat__label">Compressed</div>
+            <div class="stat__value" id="statCompressed"></div>
+          </div>
+        </div>
+        <div class="saved-pill" id="savedPill"></div>
+        <p class="results__footnote" id="resultsFootnote" hidden></p>
+        <div class="result-actions-stack">
+          <button type="button" class="btn-download" id="downloadBtn">⬇ Download compressed PDF</button>
+          <div class="result-share-row">
+            <button type="button" class="icon-btn" id="shareBtn" title="Share file" aria-label="Share compressed PDF">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+              <span>Share</span>
+            </button>
+          </div>
+          <button type="button" class="btn-reset" id="compressAnotherBtn">↺ Compress Another PDF</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="features how" aria-label="How it works">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div class="how-title">Select file</div>
+        <div class="how-desc">Choose or drop any PDF from your device.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div class="how-title">Compress</div>
+        <div class="how-desc">Select your desired compression level and let the local WASM engine optimize it.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div class="how-title">Download</div>
+        <div class="how-desc">Save the smaller PDF instantly to your device.</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span class="footer-note">100% local processing in your browser. PDFs never leave this device.</span>
+    <span class="footer-tech">Requires gs-worker.js + gs-worker.wasm. Serve the app over HTTP.</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

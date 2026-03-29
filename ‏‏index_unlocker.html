@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Unlock — Remove Password Protection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0f0d0a;
+      --paper: #f5f0e8;
+      --cream: #ede8df;
+      --surface: #faf8f5;
+      --accent: #c84b2f;
+      --dim: #7a7570;
+      --border: #d0c9be;
+      --cta-bg: #0f0d0a;
+      --cta-fg: #f5f0e8;
+      --cta-hover: #2a2520;
+      --download-fg: #f5f0e8;
+      --accent-hover: #a83a22;
+      --status-info-bg: #edf4ff;
+      --status-info-border: #b3d0ff;
+      --status-info-text: #1a4f8a;
+      --status-success-bg: #edfaf0;
+      --status-success-border: #a8e6b8;
+      --status-success-text: #1a6635;
+      --status-error-bg: #fff0ee;
+      --status-error-border: #f5b8b0;
+      --status-error-text: #8a1a1a;
+      --mono: 'DM Mono', monospace;
+      --serif: 'Fraunces', Georgia, serif;
+    }
+    body.dark-mode {
+      color-scheme: dark;
+      /* Warm Dark Theme - מתכתב עם גווני הנייר המקוריים */
+      --ink: #e8e2d9; 
+      --paper: #23201d; /* רקע חמים, לא שחור משחור */
+      --cream: #322e2a; /* צבע ביניים חמים להובר */
+      --surface: #2a2723; /* כהה מעט פחות מהרקע עבור הכרטיסייה */
+      --accent: #d85a3d;
+      --dim: #a39c93;
+      --border: #46413b;
+      --cta-bg: #e8e2d9;
+      --cta-fg: #1a1816;
+      --cta-hover: #cfc8c0;
+      --download-fg: #f5f0e8;
+      --accent-hover: #e0684c;
+      /* התאמת צבעי הסטטוס שיהיו רכים יותר */
+      --status-info-bg: #1e2633;
+      --status-info-border: #364963;
+      --status-info-text: #a1bde0;
+      --status-success-bg: #1f2b24;
+      --status-success-border: #375945;
+      --status-success-text: #8dc9a3;
+      --status-error-bg: #30211f;
+      --status-error-border: #6e433d;
+      --status-error-text: #e6a59c;
+    }
+    html, body { min-height: 100vh; background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 14px; }
+    .shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; max-width: 680px; margin: 0 auto; padding: 0 24px; }
+    header { padding: 48px 0 32px; border-bottom: 1.5px solid var(--border); }
+    .header-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+    .logo-line { display: flex; align-items: baseline; gap: 12px; flex: 1 1 auto; min-width: 0; }
+    .header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+    .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--dim); cursor: pointer; text-decoration: none; transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s; }
+    .icon-btn:hover { background: var(--cream); color: var(--ink); border-color: var(--dim); transform: scale(1.04); }
+    .icon-btn:active { transform: scale(1); }
+    .icon-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .icon-btn svg path { fill: currentColor; }
+    body:not(.dark-mode) .theme-icon-sun { display: none; }
+    body.dark-mode .theme-icon-moon { display: none; }
+    .logo-icon { font-size: 28px; line-height: 1; }
+    h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 5vw, 36px); letter-spacing: -0.02em; line-height: 1.1; }
+    .tagline { margin-top: 8px; color: var(--dim); font-size: 13px; letter-spacing: 0.04em; }
+    .privacy-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 10px; background: var(--cream); border: 1px solid var(--border); border-radius: 2px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+    .privacy-badge::before { content: '●'; color: #4caf50; font-size: 8px; }
+    main { padding: 40px 0; }
+    .card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden; }
+    #drop-zone { position: relative; padding: 48px 32px; text-align: center; cursor: pointer; transition: background 0.15s, border-color 0.15s; border-bottom: 1.5px solid var(--border); }
+    #drop-zone:hover, #drop-zone.dragover { background: var(--cream); }
+    #drop-zone.dragover { border-color: var(--accent); }
+    #drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .dz-icon { font-size: 40px; margin-bottom: 12px; }
+    .dz-label { font-family: var(--serif); font-weight: 300; font-style: italic; font-size: 20px; color: var(--ink); }
+    .dz-sub { margin-top: 6px; font-size: 12px; color: var(--dim); letter-spacing: 0.04em; }
+    .dz-chosen { margin-top: 14px; display: none; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--accent); font-weight: 500; }
+    .dz-chosen.visible { display: flex; }
+    .dz-chosen .fname { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pw-section { padding: 24px 32px; border-bottom: 1.5px solid var(--border); display: none; }
+    .pw-section.visible { display: block; }
+    label.pw-label { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+    .pw-row { display: flex; gap: 8px; }
+    input[type="password"], input[type="text"] { flex: 1; padding: 10px 14px; background: var(--paper); border: 1.5px solid var(--border); border-radius: 2px; font-family: var(--mono); font-size: 14px; color: var(--ink); outline: none; transition: border-color 0.15s; }
+    input:focus { border-color: var(--ink); }
+    input.error { border-color: var(--accent); }
+    .toggle-pw { padding: 10px 14px; background: var(--cream); border: 1.5px solid var(--border); border-radius: 2px; cursor: pointer; font-size: 16px; line-height: 1; color: var(--dim); transition: color 0.15s; }
+    .toggle-pw:hover { color: var(--ink); }
+    .action-section { padding: 24px 32px; }
+    .btn-unlock { width: 100%; padding: 14px; background: var(--cta-bg); color: var(--cta-fg); border: none; border-radius: 2px; font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-unlock:hover:not(:disabled) { background: var(--cta-hover); transform: translateY(-1px); }
+    .btn-unlock:active:not(:disabled) { transform: translateY(0); }
+    .btn-unlock:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status { margin-top: 16px; padding: 12px 16px; border-radius: 2px; font-size: 13px; display: none; align-items: center; gap: 10px; }
+    .status.visible { display: flex; }
+    .status.info { background: var(--status-info-bg); border: 1px solid var(--status-info-border); color: var(--status-info-text); }
+    .status.success { background: var(--status-success-bg); border: 1px solid var(--status-success-border); color: var(--status-success-text); }
+    .status.error { background: var(--status-error-bg); border: 1px solid var(--status-error-border); color: var(--status-error-text); }
+    .status .spin { width: 16px; height: 16px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-download { display: none; margin-top: 12px; width: 100%; padding: 13px; background: var(--accent); color: var(--download-fg); border: none; border-radius: 2px; font-family: var(--mono); font-size: 14px; font-weight: 500; letter-spacing: 0.04em; cursor: pointer; text-align: center; text-decoration: none; transition: background 0.15s; }
+    .btn-download:hover { background: var(--accent-hover); }
+    .btn-download.visible { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-reset { display: none; margin-top: 8px; width: 100%; padding: 10px; background: transparent; color: var(--dim); border: 1.5px solid var(--border); border-radius: 2px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-reset:hover { color: var(--ink); border-color: var(--ink); }
+    .btn-reset.visible { display: block; }
+    footer { padding: 20px 0 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--dim); letter-spacing: 0.04em; gap: 12px; flex-wrap: wrap; }
+    .how { margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .how-step { padding: 16px; background: var(--cream); border: 1px solid var(--border); border-radius: 2px; }
+    .how-num { font-family: var(--serif); font-size: 28px; font-weight: 300; color: var(--border); line-height: 1; margin-bottom: 6px; }
+    .how-title { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; margin-bottom: 4px; color: var(--ink); }
+    .how-desc { font-size: 11px; color: var(--dim); line-height: 1.5; }
+    @media (max-width: 480px) { .how { grid-template-columns: 1fr; } #drop-zone { padding: 32px 20px; } .pw-section, .action-section { padding: 20px; } }
+  </style>
+  <script src="./qpdf.js"></script>
+  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
+</head>
+<body>
+<script>
+(function () {
+  try {
+    var k = 'pdf-unlocker-theme';
+    var s = localStorage.getItem(k);
+    var dark = s === 'dark' || (s !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.body.classList.add('dark-mode');
+  } catch (e) { /* ignore */ }
+})();
+</script>
+<div class="shell">
+  <header>
+    <div class="header-title-row">
+      <div class="logo-line">
+        <span class="logo-icon">🔓</span>
+        <h1>PDF Unlock</h1>
+      </div>
+      <div class="header-actions" role="toolbar" aria-label="Page actions">
+        <button type="button" class="icon-btn" id="btn-share" title="Share" aria-label="Share this page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+        </button>
+        <a class="icon-btn" href="https://github.com/MrShmallow99/pdf-unlocker" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View on GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        </a>
+        <button type="button" class="icon-btn" id="btn-theme" title="Dark mode" aria-label="Toggle color theme" aria-pressed="false">
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2v-2H2v2zm18 0h2v-2h-2v2zM11 2v2h2V2h-2zm0 18v2h2v-2h-2zM4.93 4.93l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zm12.02 12.02l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41zm1.41-11.02l-1.41 1.41 1.41 1.41 1.41-1.41-1.41-1.41zM4.93 17.07l1.41 1.41 1.41-1.41-1.41-1.41-1.41 1.41z"/></svg>
+        </button>
+      </div>
+    </div>
+    <p class="tagline">Remove password protection from PDF files — entirely in your browser.</p>
+    <span class="privacy-badge">100% client-side · no uploads · no server</span>
+  </header>
+
+  <main>
+    <div class="card">
+      <div id="drop-zone">
+        <input type="file" id="file-input" accept=".pdf,application/pdf" />
+        <div class="dz-icon">📄</div>
+        <div class="dz-label">Drop your PDF here</div>
+        <div class="dz-sub">or click to browse</div>
+        <div class="dz-chosen" id="chosen-name">
+          <span>📎</span>
+          <span class="fname" id="fname-text"></span>
+        </div>
+      </div>
+
+      <div class="pw-section" id="pw-section">
+        <label class="pw-label" for="pw-input">PDF Password</label>
+        <div class="pw-row">
+          <input type="password" id="pw-input" placeholder="Enter password…" autocomplete="current-password" />
+          <button type="button" class="toggle-pw" id="toggle-pw" title="Show/hide password">👁</button>
+        </div>
+      </div>
+
+      <div class="action-section">
+        <button type="button" class="btn-unlock" id="btn-unlock" disabled>
+          <span id="unlock-label">Loading PDF Engine...</span>
+        </button>
+        <div class="status" id="status"></div>
+        <a class="btn-download" id="btn-download" download>⬇ Download Unlocked PDF</a>
+        <button type="button" class="btn-reset" id="btn-reset">↺ Start over</button>
+      </div>
+    </div>
+
+    <div class="how">
+      <div class="how-step">
+        <div class="how-num">01</div>
+        <div class="how-title">Select file</div>
+        <div class="how-desc">Choose or drop any password-protected PDF from your device.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">02</div>
+        <div class="how-title">Enter password</div>
+        <div class="how-desc">Your password is used only in-memory and never sent anywhere.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">03</div>
+        <div class="how-title">Download</div>
+        <div class="how-desc">Get a clean, unprotected copy of your PDF instantly.</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>All processing happens locally in your browser.</span>
+    <span>Files are never uploaded to any server.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const QPDF_CDN_BASE = './';
+  const IN_NAME = 'locked.pdf';
+  const OUT_NAME = 'unlocked.pdf';
+  const MAX_BYTES = 150 * 1024 * 1024;
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const chosenName = document.getElementById('chosen-name');
+  const fnameText = document.getElementById('fname-text');
+  const pwSection = document.getElementById('pw-section');
+  const pwInput = document.getElementById('pw-input');
+  const togglePw = document.getElementById('toggle-pw');
+  const btnUnlock = document.getElementById('btn-unlock');
+  const unlockLabel = document.getElementById('unlock-label');
+  const statusEl = document.getElementById('status');
+  const btnDownload = document.getElementById('btn-download');
+  const btnReset = document.getElementById('btn-reset');
+  const btnShare = document.getElementById('btn-share');
+
+  let qpdfModule = null;
+  let wasmReady = false;
+  let selectedFile = null;
+  let lastDownloadUrl = null;
+  let lastOutName = 'unlocked.pdf';
+
+  function setUnlockEnabled() {
+    btnUnlock.disabled =
+      !wasmReady || !selectedFile || pwInput.value.trim().length === 0;
+  }
+
+  function clearStatus() {
+    statusEl.className = 'status';
+    statusEl.innerHTML = '';
+  }
+
+  function showStatus(kind, html, withSpinner) {
+    statusEl.className = 'status visible ' + kind;
+    statusEl.innerHTML = (withSpinner ? '<span class="spin" aria-hidden="true"></span>' : '') + html;
+  }
+
+  function hideDownloadExtras() {
+    btnDownload.classList.remove('visible');
+    btnReset.classList.remove('visible');
+    if (lastDownloadUrl) {
+      URL.revokeObjectURL(lastDownloadUrl);
+      lastDownloadUrl = null;
+    }
+    btnDownload.removeAttribute('href');
+  }
+
+  function updateChosenFile(file) {
+    if (file && file.size > MAX_BYTES) {
+      fileInput.value = '';
+      selectedFile = null;
+      fnameText.textContent = '';
+      chosenName.classList.remove('visible');
+      pwSection.classList.remove('visible');
+      pwInput.value = '';
+      pwInput.classList.remove('error');
+      hideDownloadExtras();
+      showStatus('error', 'File is too large. Please select a PDF under 150MB.', false);
+      setUnlockEnabled();
+      return;
+    }
+
+    selectedFile = file;
+    if (file) {
+      fnameText.textContent = file.name;
+      chosenName.classList.add('visible');
+      pwSection.classList.add('visible');
+      lastOutName = deriveOutputName(file.name);
+    } else {
+      fnameText.textContent = '';
+      chosenName.classList.remove('visible');
+      pwSection.classList.remove('visible');
+    }
+    pwInput.classList.remove('error');
+    hideDownloadExtras();
+    clearStatus();
+    setUnlockEnabled();
+  }
+
+  function deriveOutputName(originalName) {
+    const base = originalName.replace(/\.pdf$/i, '') || 'document';
+    return base + '-unlocked.pdf';
+  }
+
+  function cleanupVfs() {
+    if (!qpdfModule || !qpdfModule.FS) return;
+    const FS = qpdfModule.FS;
+    [IN_NAME, OUT_NAME].forEach(function (name) {
+      try {
+        FS.unlink(name);
+      } catch (e) {
+        /* ignore if missing */
+      }
+    });
+  }
+
+  function qpdfErrorMessage(err, exitCode) {
+    if (typeof exitCode === 'number' && exitCode !== 0) {
+      if (exitCode === 2) {
+        return 'Could not unlock the PDF. Check the password and try again.';
+      }
+      return 'QPDF exited with code ' + exitCode + '.';
+    }
+    const msg = err && (err.message || String(err));
+    if (/password|encrypt|invalid|wrong/i.test(msg)) {
+      return 'Could not unlock the PDF. Check the password and try again.';
+    }
+    return msg || 'Something went wrong while processing the PDF.';
+  }
+
+  if (btnShare) {
+    const shareTitleDefault = btnShare.getAttribute('title') || 'Share';
+    btnShare.addEventListener('click', function () {
+      const url = window.location.href;
+      const title = document.title;
+
+      function showCopied() {
+        btnShare.setAttribute('title', 'Copied!');
+        setTimeout(function () {
+          btnShare.setAttribute('title', shareTitleDefault);
+        }, 2000);
+      }
+
+      if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(showCopied).catch(function () {});
+          }
+        });
+        return;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(showCopied).catch(function () {});
+      } else {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.left = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok) showCopied();
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    });
+  }
+
+  togglePw.addEventListener('click', function () {
+    const isPwd = pwInput.getAttribute('type') === 'password';
+    pwInput.setAttribute('type', isPwd ? 'text' : 'password');
+  });
+
+  pwInput.addEventListener('input', function () {
+    setUnlockEnabled();
+  });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('dragover');
+    });
+  });
+
+  dropZone.addEventListener('drop', function (e) {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f && f.type === 'application/pdf') {
+      updateChosenFile(f);
+      fileInput.value = '';
+    }
+  });
+
+  fileInput.addEventListener('change', function () {
+    const f = fileInput.files && fileInput.files[0];
+    updateChosenFile(f || null);
+  });
+
+  btnReset.addEventListener('click', function () {
+    fileInput.value = '';
+    pwInput.value = '';
+    pwInput.classList.remove('error');
+    updateChosenFile(null);
+    unlockLabel.textContent = 'Unlock PDF';
+    clearStatus();
+  });
+
+  btnUnlock.addEventListener('click', function () {
+    if (!wasmReady || !qpdfModule || !selectedFile) return;
+
+    const password = pwInput.value;
+    pwInput.classList.remove('error');
+    hideDownloadExtras();
+    clearStatus();
+
+    unlockLabel.innerHTML = '<span class="spin" style="width:14px;height:14px;border-width:2px"></span> Unlocking…';
+    btnUnlock.disabled = true;
+    showStatus('info', 'Decrypting PDF in your browser…', true);
+
+    const FS = qpdfModule.FS;
+
+    selectedFile.arrayBuffer().then(function (buf) {
+      const data = new Uint8Array(buf);
+      cleanupVfs();
+      FS.writeFile(IN_NAME, data);
+
+      const args = ['--password=' + password, '--decrypt', IN_NAME, OUT_NAME];
+      var exitCode = 0;
+      try {
+        exitCode = qpdfModule.callMain(args);
+      } catch (err) {
+        cleanupVfs();
+        pwInput.classList.add('error');
+        const code = typeof err.status === 'number' ? err.status : exitCode;
+        showStatus('error', qpdfErrorMessage(err, code), false);
+        unlockLabel.textContent = 'Unlock PDF';
+        btnUnlock.disabled = false;
+        setUnlockEnabled();
+        return;
+      }
+
+      if (exitCode !== 0) {
+        cleanupVfs();
+        pwInput.classList.add('error');
+        showStatus('error', qpdfErrorMessage(null, exitCode), false);
+        unlockLabel.textContent = 'Unlock PDF';
+        btnUnlock.disabled = false;
+        setUnlockEnabled();
+        return;
+      }
+
+      var outBytes;
+      try {
+        outBytes = FS.readFile(OUT_NAME);
+      } catch (readErr) {
+        cleanupVfs();
+        showStatus('error', 'Could not read the output file.', false);
+        unlockLabel.textContent = 'Unlock PDF';
+        btnUnlock.disabled = false;
+        setUnlockEnabled();
+        return;
+      }
+
+      cleanupVfs();
+
+      const blob = new Blob([outBytes], { type: 'application/pdf' });
+      if (lastDownloadUrl) URL.revokeObjectURL(lastDownloadUrl);
+      lastDownloadUrl = URL.createObjectURL(blob);
+      btnDownload.href = lastDownloadUrl;
+      btnDownload.download = lastOutName;
+      btnDownload.classList.add('visible');
+      btnReset.classList.add('visible');
+
+      showStatus('success', 'Done. Your PDF is ready to download.', false);
+      unlockLabel.textContent = 'Unlock PDF';
+      btnUnlock.disabled = false;
+      setUnlockEnabled();
+    }).catch(function (err) {
+      cleanupVfs();
+      showStatus('error', (err && err.message) || 'Could not read the file.', false);
+      unlockLabel.textContent = 'Unlock PDF';
+      btnUnlock.disabled = false;
+      setUnlockEnabled();
+    });
+  });
+
+  function initQpdf() {
+    const createModule = typeof Module === 'function' ? Module : window.Module;
+    if (typeof createModule !== 'function') {
+      showStatus('error', 'Failed to load the PDF engine script.', false);
+      unlockLabel.textContent = 'Engine unavailable';
+      return;
+    }
+
+    createModule({
+      noInitialRun: true,
+      locateFile: function (path) {
+        return QPDF_CDN_BASE + path;
+      }
+    })
+      .then(function (mod) {
+        qpdfModule = mod;
+        wasmReady = true;
+        unlockLabel.textContent = 'Unlock PDF';
+        setUnlockEnabled();
+      })
+      .catch(function (err) {
+        wasmReady = false;
+        unlockLabel.textContent = 'Engine failed to load';
+        showStatus(
+          'error',
+          'Could not load the PDF engine: ' + ((err && err.message) || String(err)),
+          false
+        );
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQpdf);
+  } else {
+    initQpdf();
+  }
+})();
+</script>
+<script>
+(function () {
+  var STORAGE_KEY = 'pdf-unlocker-theme';
+  var btn = document.getElementById('btn-theme');
+  if (!btn) return;
+  function refreshThemeButton() {
+    var dark = document.body.classList.contains('dark-mode');
+    btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    btn.title = dark ? 'Light mode' : 'Dark mode';
+  }
+  refreshThemeButton();
+  btn.addEventListener('click', function () {
+    document.body.classList.toggle('dark-mode');
+    try {
+      localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    } catch (e) {
+      /* ignore */
+    }
+    refreshThemeButton();
+  });
+})();
+</script>
+</body>
+</html>

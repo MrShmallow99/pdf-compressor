@@ -388,11 +388,21 @@ els.compressBtn.addEventListener("click", function () {
     },
   })
     .then(function (out) {
-      lastCompressedBlob    = out.blob;
-      lastSuggestedFileName = out.fileName;
+      var originalSize = typeof (currentFile && currentFile.size) === "number"
+        ? currentFile.size
+        : out.originalSize;
+      var newSize = out.blob.size;
 
-      var originalSize = out.originalSize;
-      var newSize      = out.blob.size;
+      // Safety net: if the result isn't smaller, keep the original as output.
+      var usedOriginal = newSize >= originalSize;
+      if (usedOriginal) {
+        lastCompressedBlob = currentFile;
+        lastSuggestedFileName = (currentFile && currentFile.name) ? currentFile.name : out.fileName;
+        newSize = originalSize;
+      } else {
+        lastCompressedBlob    = out.blob;
+        lastSuggestedFileName = out.fileName;
+      }
 
       els.statOriginal.textContent   = formatBytes(originalSize);
       els.statCompressed.textContent = formatBytes(newSize);
@@ -400,21 +410,30 @@ els.compressBtn.addEventListener("click", function () {
       var pct = originalSize > 0
         ? Math.round((1 - newSize / originalSize) * 100)
         : 0;
-      if (pct > 0) {
+      if (usedOriginal) {
+        els.savedPill.textContent = "0% — Already optimized";
+      } else if (pct > 0) {
         els.savedPill.textContent = pct + "% smaller";
       } else if (pct === 0) {
         els.savedPill.textContent = "Same size";
       } else {
-        els.savedPill.textContent = "Larger output";
+        // Should not happen with the safety net above, but keep it friendly.
+        els.savedPill.textContent = "0% — Already optimized";
       }
 
       if (els.resultsFootnote) {
+        if (usedOriginal) {
+          els.resultsFootnote.textContent =
+            "The file is already optimized for this quality level.";
+          els.resultsFootnote.hidden = false;
+        } else {
         els.resultsFootnote.hidden = true;
         els.resultsFootnote.textContent = "";
+        }
       }
 
       revokeDownloadUrl();
-      downloadObjectUrl = URL.createObjectURL(out.blob);
+      downloadObjectUrl = URL.createObjectURL(lastCompressedBlob);
 
       els.processingSection.hidden = true;
       els.resultState.hidden       = false;

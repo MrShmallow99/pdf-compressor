@@ -16,7 +16,7 @@ Most online PDF compressors require you to upload your potentially sensitive doc
 
 ## 🛠️ Technology Stack
 * **Frontend:** Vanilla HTML5, CSS3, and JavaScript (No heavy frameworks or build tools).
-* **PDF Engine:** WebAssembly port of Ghostscript (`gs-worker.wasm`), executed on-demand via Web Workers.
+* **PDF Engine:** WebAssembly port of Ghostscript via [ghostscript-pdf-compress.wasm](https://github.com/laurentmmeyer/ghostscript-pdf-compress.wasm), executed on-demand via Web Workers.
 * **Hosting:** Vercel (Static deployment).
 
 ## 🚀 How to Use

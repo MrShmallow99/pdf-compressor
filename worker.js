@@ -43,36 +43,50 @@ self.onmessage = function (e) {
     var s = String(level || "").trim().toLowerCase().replace(/\s+/g, "");
 
     if (s === "extreme" || s === "extremecompression") {
+      // Extreme: maximum compression (~72 DPI)
+      base[2] = "-dPDFSETTINGS=/screen";
       base.push(
         "-dColorImageResolution=72",
         "-dGrayImageResolution=72",
         "-dMonoImageResolution=72",
         "-dDownsampleColorImages=true",
         "-dDownsampleGrayImages=true",
+        "-dDownsampleMonoImages=true",
         "-dAutoFilterColorImages=true",
         "-dAutoFilterGrayImages=true"
       );
     } else if (s === "high" || s === "highquality") {
-      base[2] = "-dPDFSETTINGS=/printer";
-      base.push(
-        "-dColorImageResolution=300",
-        "-dGrayImageResolution=300",
-        "-dMonoImageResolution=300",
-        "-dDownsampleColorImages=true"
-      );
-    } else {
+      // High: slight compression (~150 DPI)
       base[2] = "-dPDFSETTINGS=/ebook";
       base.push(
         "-dColorImageResolution=150",
         "-dGrayImageResolution=150",
         "-dMonoImageResolution=150",
-        "-dDownsampleColorImages=true"
+        "-dDownsampleColorImages=true",
+        "-dDownsampleGrayImages=true",
+        "-dDownsampleMonoImages=true"
+      );
+    } else {
+      // Recommended: medium compression (~100 DPI) between ebook and screen
+      base[2] = "-dPDFSETTINGS=/ebook";
+      base.push(
+        "-dDownsampleColorImages=true",
+        "-dDownsampleGrayImages=true",
+        "-dDownsampleMonoImages=true",
+        "-dColorImageDownsampleThreshold=1.0",
+        "-dColorImageDownsampleType=/Bicubic",
+        "-dColorImageResolution=100",
+        "-dGrayImageDownsampleThreshold=1.0",
+        "-dGrayImageDownsampleType=/Bicubic",
+        "-dGrayImageResolution=100",
+        "-dMonoImageDownsampleThreshold=1.0",
+        "-dMonoImageDownsampleType=/Bicubic",
+        "-dMonoImageResolution=100"
       );
     }
 
-    if (s !== "high" && s !== "highquality") {
-      base.push("settings.ps");
-    }
+    // Always apply PostScript distiller params for consistent compression.
+    base.push("settings.ps");
 
     base.push("input.pdf");
     return base;
@@ -124,15 +138,19 @@ self.onmessage = function (e) {
         Module.FS.writeFile("input.pdf", fileData, { encoding: "binary" });
 
         var s = String(level || "").trim().toLowerCase().replace(/\s+/g, "");
+        var ps = "";
         if (s === "extreme" || s === "extremecompression") {
-          var ps =
+          ps =
             "<< /ColorImageDict << /QFactor 0.20 /ColorTransform 1 >> /GrayImageDict << /QFactor 0.20 >> >> setdistillerparams";
-          Module.FS.writeFile("settings.ps", ps);
-        } else if (s !== "high" && s !== "highquality") {
-          var ps =
-            "<< /ColorImageDict << /QFactor 0.65 /ColorTransform 1 >> /GrayImageDict << /QFactor 0.65 >> >> setdistillerparams";
-          Module.FS.writeFile("settings.ps", ps);
+        } else if (s === "high" || s === "highquality") {
+          ps =
+            "<< /ColorImageDict << /QFactor 0.85 /ColorTransform 1 >> /GrayImageDict << /QFactor 0.85 >> >> setdistillerparams";
+        } else {
+          // Recommended
+          ps =
+            "<< /ColorImageDict << /QFactor 0.55 /ColorTransform 1 >> /GrayImageDict << /QFactor 0.55 >> >> setdistillerparams";
         }
+        Module.FS.writeFile("settings.ps", ps);
       },
     ],
 

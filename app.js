@@ -17,9 +17,7 @@ const STORAGE_KEY_THEME = "pdf-compressor-theme";
 
 /** Strongest compression last: escalate toward smaller files. */
 var LEVEL_ORDER = ["high", "recommended", "extreme"];
-
-/** If compressed size is still above this fraction of the original, try next level. */
-var SIZE_THRESHOLD_RATIO = 0.9;
+// Waterfall/size-target fallback removed: we always respect the user-selected level.
 
 // =============================================================================
 // Theme
@@ -99,24 +97,7 @@ function isPdfFile(file) {
   );
 }
 
-function levelChainFrom(start) {
-  var idx = LEVEL_ORDER.indexOf(start);
-  if (idx < 0) idx = LEVEL_ORDER.indexOf("recommended");
-  return LEVEL_ORDER.slice(idx);
-}
-
-/**
- * Accept this pass only if output is strictly smaller than the source and meets
- * the size target (~10% reduction). If compressedSize >= originalSize, caller
- * must try the next waterfall level (no “zero compression” early exit).
- * @param {number} compressedSize
- * @param {number} originalSize
- */
-function shouldAcceptCompressedResult(compressedSize, originalSize) {
-  if (originalSize <= 0) return compressedSize === 0;
-  if (compressedSize >= originalSize) return false;
-  return compressedSize <= originalSize * SIZE_THRESHOLD_RATIO;
-}
+// NOTE: We intentionally do not auto-escalate settings based on output size.
 
 // =============================================================================
 // compressPDF — exactly one compression attempt, one Worker, always terminate()
@@ -193,65 +174,24 @@ async function compressBestResult(file, startLevel, hooks) {
   var buf = await file.arrayBuffer();
   var master = new Uint8Array(buf);
   var originalSize = master.byteLength;
-  var chain = levelChainFrom(startLevel);
+  var lev = startLevel || "recommended";
   var onAttempt = hooks && hooks.onAttempt;
+  if (onAttempt) onAttempt(0, lev);
 
-  /** @type {{ blob: Blob, fileName: string, level: CompressionLevel, size: number }[]} */
-  var attempts = [];
+  var copy = master.slice();
+  var result = await compressPDF(file, copy, lev);
 
-  for (var i = 0; i < chain.length; i++) {
-    var lev = chain[i];
-    if (onAttempt) onAttempt(i, lev);
-
-    var copy = master.slice();
-    var result = await compressPDF(file, copy, lev);
-
-    var sizeMb = (result.blob.size / (1024 * 1024)).toFixed(2);
-    console.log("Level " + lev + " resulted in " + sizeMb + " MB");
-
-    attempts.push({
-      blob: result.blob,
-      fileName: result.fileName,
-      level: lev,
-      size: result.blob.size,
-    });
-
-    if (shouldAcceptCompressedResult(result.blob.size, originalSize)) {
-      return {
-        blob: result.blob,
-        fileName: result.fileName,
-        originalSize: originalSize,
-        metThreshold: true,
-        steppedDown: i > 0,
-        highlyOptimizedNotice: false,
-        attemptCount: i + 1,
-      };
-    }
-  }
-
-  var best = attempts[0];
-  for (var j = 1; j < attempts.length; j++) {
-    if (attempts[j].size < best.size) best = attempts[j];
-  }
-
-  var useOriginal = originalSize < best.size;
-  var outBlob = useOriginal
-    ? new Blob([master], { type: "application/pdf" })
-    : best.blob;
-  var outName = useOriginal
-    ? (file.name && /\.pdf$/i.test(file.name)
-        ? file.name
-        : (file.name || "document").replace(/\.[^/.]+$/, "") + ".pdf")
-    : best.fileName;
+  var sizeMb = (result.blob.size / (1024 * 1024)).toFixed(2);
+  console.log("Level " + lev + " resulted in " + sizeMb + " MB");
 
   return {
-    blob: outBlob,
-    fileName: outName,
+    blob: result.blob,
+    fileName: result.fileName,
     originalSize: originalSize,
-    metThreshold: false,
-    steppedDown: chain.length > 1,
-    highlyOptimizedNotice: true,
-    attemptCount: chain.length,
+    metThreshold: null,
+    steppedDown: false,
+    highlyOptimizedNotice: false,
+    attemptCount: 1,
   };
 }
 
@@ -457,37 +397,20 @@ els.compressBtn.addEventListener("click", function () {
       els.statOriginal.textContent   = formatBytes(originalSize);
       els.statCompressed.textContent = formatBytes(newSize);
 
-      if (out.highlyOptimizedNotice) {
-        showToast("This file is already highly optimized.");
-        if (newSize >= originalSize) {
-          els.savedPill.textContent = "Best available — original kept";
-        } else {
-          var pctH = originalSize > 0
-            ? Math.round((1 - newSize / originalSize) * 100)
-            : 0;
-          els.savedPill.textContent =
-            pctH > 0 ? pctH + "% smaller (best pass)" : "Best pass selected";
-        }
+      var pct = originalSize > 0
+        ? Math.round((1 - newSize / originalSize) * 100)
+        : 0;
+      if (pct > 0) {
+        els.savedPill.textContent = pct + "% smaller";
+      } else if (pct === 0) {
+        els.savedPill.textContent = "Same size";
       } else {
-        var pct = originalSize > 0
-          ? Math.round((1 - newSize / originalSize) * 100)
-          : 0;
-        if (pct > 0) {
-          els.savedPill.textContent = pct + "% smaller";
-        } else {
-          els.savedPill.textContent = "Reduced below 90% of original size";
-        }
+        els.savedPill.textContent = "Larger output";
       }
 
       if (els.resultsFootnote) {
-        if (!out.highlyOptimizedNotice && out.steppedDown) {
-          els.resultsFootnote.textContent =
-            "Stronger settings were applied automatically to hit the size target.";
-          els.resultsFootnote.hidden = false;
-        } else {
-          els.resultsFootnote.hidden = true;
-          els.resultsFootnote.textContent = "";
-        }
+        els.resultsFootnote.hidden = true;
+        els.resultsFootnote.textContent = "";
       }
 
       revokeDownloadUrl();
